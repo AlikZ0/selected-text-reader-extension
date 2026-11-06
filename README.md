@@ -1,0 +1,1 @@
+# selected-text-reader-extension
