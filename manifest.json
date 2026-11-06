@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Голосовой читатель — тексты и статьи",
+  "short_name": "Голосовой читатель",
+  "version": "3.0.0",
+  "description": "Минималистичный голосовой читатель: озвучивание выделения и статей, прогресс, сохранённые тексты, темы и настройка голоса.",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "storage",
+    "tts",
+    "offscreen"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Голосовой читатель",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "read-selection": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+8"
+      },
+      "description": "Прочитать выделенный текст"
+    },
+    "stop-reading": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+9"
+      },
+      "description": "Остановить чтение"
+    }
+  }
+}

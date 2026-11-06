@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Голосовой читатель</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><rect x="5" y="12" width="3" height="8" rx="1.5" fill="currentColor"/><rect x="11" y="7" width="3" height="18" rx="1.5" fill="currentColor"/><rect x="17" y="10" width="3" height="12" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="3" height="24" rx="1.5" fill="currentColor"/></svg>
+        </div>
+        <div><h1>Голосовой читатель</h1><p>Текст в голос, без лишнего</p></div>
+      </div>
+      <label class="theme-picker"><span class="sr-only">Тема</span><select id="theme" aria-label="Тема оформления"><option value="system">◐ Система</option><option value="light">☀ Светлая</option><option value="dark">☾ Тёмная</option></select></label>
+    </header>
+
+    <section class="editor card" aria-labelledby="editor-title">
+      <div class="section-head">
+        <div><span class="eyebrow">01 / ИСТОЧНИК</span><h2 id="editor-title">Что прочитать?</h2></div>
+        <span class="tag" id="languageTag">Автоязык</span>
+      </div>
+      <div class="import-buttons">
+        <button id="getSelection" class="soft-button" type="button" title="Получить выделенный текст с сайта">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4H3v5M19 4h2v5M5 20H3v-5M19 20h2v-5M7 9h10M7 13h10M7 17h6"/></svg>Выделение
+        </button>
+        <button id="getArticle" class="soft-button" type="button" title="Извлечь основной текст открытой страницы">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5Zm0 12A2.5 2.5 0 0 1 6.5 15H20M8 7h8M8 10h6"/></svg>Вся статья
+        </button>
+      </div>
+      <label class="sr-only" for="text">Текст для озвучивания</label>
+      <textarea id="text" placeholder="Выделите текст на странице или вставьте его сюда..." maxlength="60000" spellcheck="false"></textarea>
+      <div class="editor-bottom">
+        <div class="stats"><span id="wordCount">0 слов</span><span class="dot">•</span><span id="timeEstimate">0 мин</span><span class="dot">•</span><span id="charCount">0 / 60 000</span></div>
+        <div class="editor-actions">
+          <button id="clearText" class="icon-button subtle" type="button" title="Очистить текст" aria-label="Очистить текст"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 3h4M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
+          <button id="saveText" class="save-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l3 3v13H4V4h1Zm3 0v6h8V4M8 20v-7h8v7"/></svg>Сохранить</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="player card" aria-labelledby="player-title">
+      <div class="section-head player-head">
+        <div><span class="eyebrow">02 / ПРОСЛУШИВАНИЕ</span><h2 id="player-title">Плеер</h2></div>
+        <span class="status" id="status"><span class="status-dot"></span><span id="statusText">Готов</span></span>
+      </div>
+      <div class="progress-top"><span id="progressLabel">Готов к чтению</span><span id="progressPercent">0%</span></div>
+      <div class="progress-track" role="progressbar" aria-label="Прогресс чтения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack"><div id="progressFill"></div></div>
+      <div class="controls">
+        <button id="prev" class="control-button" type="button" title="На фрагмент назад" aria-label="На фрагмент назад" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14M19 5 7 12l12 7Z"/></svg></button>
+        <button id="play" class="play-button" type="button" title="Начать чтение"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg><span>Читать</span></button>
+        <button id="pause" class="control-button" type="button" title="Пауза или продолжить" aria-label="Пауза или продолжить" disabled><svg id="pauseIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+        <button id="next" class="control-button" type="button" title="Следующий фрагмент" aria-label="Следующий фрагмент" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5v14M5 5l12 7-12 7Z"/></svg></button>
+        <button id="stop" class="control-button stop-button" type="button" title="Остановить" aria-label="Остановить" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1"/></svg></button>
+      </div>
+      <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="options card" aria-labelledby="options-title">
+      <div class="section-head compact"><div><span class="eyebrow">03 / ЗВУЧАНИЕ</span><h2 id="options-title">Настройки голоса</h2></div><span id="rateChip" class="rate-chip">1.0×</span></div>
+      <div class="slider-head"><label for="rate">Скорость</label><output id="rateValue" for="rate">1.0×</output></div>
+      <input id="rate" type="range" min="0.5" max="2.5" step="0.1" value="1">
+      <div class="rate-presets" role="group" aria-label="Быстрый выбор скорости">
+        <button type="button" data-rate="0.8">0.8×</button><button type="button" data-rate="1">1×</button><button type="button" data-rate="1.25">1.25×</button><button type="button" data-rate="1.5">1.5×</button><button type="button" data-rate="2">2×</button>
+      </div>
+      <details class="advanced" id="advanced">
+        <summary>Больше настроек <span aria-hidden="true">⌄</span></summary>
+        <div class="advanced-content">
+          <div class="select-grid"><div class="field"><label for="lang">Язык текста</label><select id="lang"><option value="auto">Автоопределение</option><option value="ru-RU">Русский</option><option value="en-US">English</option><option value="hy-AM">Հայերեն</option></select></div><div class="field"><label for="engine">Речевой движок</label><select id="engine"><option value="auto">Автоматически</option><option value="chrome">Chrome TTS</option><option value="web">Web Speech</option></select></div></div>
+          <div class="field"><label for="voice">Голос</label><select id="voice"><option value="auto">Автовыбор</option></select></div>
+          <p class="voice-hint" id="voiceHint">Доступность голосов зависит от системы.</p>
+          <div class="select-grid slider-grid"><div><div class="slider-head"><label for="pitch">Высота тона</label><output id="pitchValue" for="pitch">1.0</output></div><input id="pitch" type="range" min="0.5" max="2" step="0.1" value="1"></div><div><div class="slider-head"><label for="volume">Громкость</label><output id="volumeValue" for="volume">100%</output></div><input id="volume" type="range" min="0" max="1" step="0.05" value="1"></div></div>
+          <p class="notice">Изменения голоса применяются при следующем запуске чтения. Нужный язык должен поддерживаться установленным голосом.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="library card" aria-labelledby="library-title">
+      <details id="libraryDetails"><summary class="library-summary"><span><span class="eyebrow">04 / ЛОКАЛЬНО</span><strong id="library-title">Сохранённые тексты</strong></span><span class="library-counter" id="libraryCount">0 <span aria-hidden="true">⌄</span></span></summary>
+        <div class="library-content" id="libraryList"><p class="empty">Здесь появятся тексты, которые вы сохраните вручную.</p></div>
+      </details>
+    </section>
+
+    <footer><span>Выделите текст → правая кнопка → «Прочитать»</span><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>8</kbd></span></footer>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
