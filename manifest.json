@@ -1,24 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Голосовой читатель — тексты и статьи",
+  "name": "Голосовой читатель — выделенный текст",
   "short_name": "Голосовой читатель",
-  "version": "3.0.0",
-  "description": "Минималистичный голосовой читатель: озвучивание выделения и статей, прогресс, сохранённые тексты, темы и настройка голоса.",
+  "version": "1.0.0",
+  "description": "Озвучивание выделенного текста на веб-страницах. Голоса, скорость, пауза и горячие клавиши.",
   "minimum_chrome_version": "116",
-  "permissions": [
-    "activeTab",
-    "scripting",
-    "contextMenus",
-    "storage",
-    "tts",
-    "offscreen"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
+  "permissions": ["activeTab", "scripting", "contextMenus", "storage", "tts", "offscreen"],
+  "background": { "service_worker": "background.js" },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Голосовой читатель",
+    "default_title": "Прочитать выделенный текст",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -33,15 +24,11 @@
   },
   "commands": {
     "read-selection": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+8"
-      },
-      "description": "Прочитать выделенный текст"
+      "suggested_key": { "default": "Ctrl+Shift+8" },
+      "description": "Озвучить выделенный текст"
     },
     "stop-reading": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+9"
-      },
+      "suggested_key": { "default": "Ctrl+Shift+9" },
       "description": "Остановить чтение"
     }
   }

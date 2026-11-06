@@ -1,119 +1,108 @@
-/* Web Speech playback in an offscreen document survives closing the popup. */
+/* The Web Speech fallback lives here so it survives popup closure. */
 const synth = window.speechSynthesis;
 let generation = 0;
-let chunks = [];
-let index = 0;
+let queue = [];
 let nextIndex = 0;
 let status = 'idle';
-let lastError = '';
 let currentUtterance = null;
-let config = { lang: 'ru-RU', rate: 1, pitch: 1, volume: 1, voiceName: null };
+let config = { lang: 'ru-RU', rate: 1, voiceName: null };
 
 function availableVoices() {
   return synth.getVoices().map(v => ({ name: v.name, lang: v.lang, localService: v.localService }));
 }
 
 async function voicesReady() {
-  if (availableVoices().length) return availableVoices();
+  const initial = availableVoices();
+  if (initial.length) return initial;
   return new Promise(resolve => {
-    let finished = false;
-    const done = () => {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timer);
-      synth.removeEventListener('voiceschanged', done);
+    let resolved = false;
+    const finish = () => {
+      if (resolved) return;
+      resolved = true;
+      synth.removeEventListener('voiceschanged', finish);
+      clearTimeout(timeout);
       resolve(availableVoices());
     };
-    synth.addEventListener('voiceschanged', done);
-    const timer = setTimeout(done, 800);
+    synth.addEventListener('voiceschanged', finish);
+    const timeout = setTimeout(finish, 700);
   });
 }
 
-function cancel(clear = true) {
-  ++generation;
-  synth.cancel();
+function cancel() {
+  generation++;
+  queue = [];
+  nextIndex = 0;
   currentUtterance = null;
   status = 'idle';
-  if (clear) { chunks = []; index = 0; nextIndex = 0; lastError = ''; }
+  synth.cancel();
 }
 
-function playNext(run) {
-  if (run !== generation) return;
-  if (nextIndex >= chunks.length) {
-    status = 'idle';
-    index = chunks.length;
+function continueQueue(id) {
+  if (id !== generation) return;
+  if (nextIndex >= queue.length) {
     currentUtterance = null;
+    queue = [];
+    status = 'idle';
     return;
   }
-  const itemIndex = nextIndex++;
-  index = itemIndex;
-  const utterance = new SpeechSynthesisUtterance(chunks[itemIndex]);
-  const voice = synth.getVoices().find(v => v.name === config.voiceName)
-    || synth.getVoices().find(v => v.lang?.toLowerCase().startsWith(config.lang.slice(0, 2).toLowerCase()));
-  utterance.lang = voice?.lang || config.lang;
-  if (voice) utterance.voice = voice;
+  const utterance = new SpeechSynthesisUtterance(queue[nextIndex++]);
+  utterance.lang = config.lang;
   utterance.rate = config.rate;
-  utterance.pitch = config.pitch;
-  utterance.volume = config.volume;
-  utterance.onstart = () => { if (generation === run) status = 'playing'; };
-  utterance.onend = () => {
-    if (generation !== run) return;
-    index = itemIndex + 1;
-    playNext(run);
-  };
-  utterance.onerror = event => {
-    if (generation !== run) return;
-    if (event.error === 'canceled' || event.error === 'interrupted') return;
-    lastError = `Ошибка Web Speech: ${event.error || 'unknown'}`;
-    status = 'error';
-    currentUtterance = null;
+  const found = synth.getVoices().find(v => v.name === config.voiceName);
+  if (found) {
+    utterance.voice = found;
+    utterance.lang = found.lang || config.lang;
+  }
+  utterance.onstart = () => { if (id === generation) status = 'playing'; };
+  utterance.onend = () => { if (id === generation) continueQueue(id); };
+  utterance.onerror = (event) => {
+    if (id !== generation) return;
+    // 'canceled' and 'interrupted' can legitimately follow Stop.
+    console.error('Web Speech:', event.error);
+    cancel();
   };
   currentUtterance = utterance;
   synth.speak(utterance);
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.target !== 'offscreen') return false;
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.target !== 'offscreen') return false;
   (async () => {
-    switch (message.type) {
-      case 'GET_VOICES': return { voices: await voicesReady() };
-      case 'GET_STATE': return { status, index, total: chunks.length, lastError };
+    switch (msg.type) {
+      case 'GET_VOICES':
+        return { voices: await voicesReady() };
+      case 'GET_STATE':
+        return { status };
       case 'SPEAK': {
         cancel();
+        queue = Array.isArray(msg.chunks) ? msg.chunks.filter(Boolean) : [];
+        if (!queue.length) throw new Error('Текст отсутствует.');
+        config = { lang: msg.lang || 'ru-RU', rate: msg.rate || 1, voiceName: msg.voiceName || null };
+        // Browser engines may provide an unnamed default voice.
         const voices = await voicesReady();
-        if (!voices.length) throw new Error('Web Speech не обнаружил голосов.');
-        chunks = Array.isArray(message.chunks) ? message.chunks.filter(x => typeof x === 'string' && x.trim()) : [];
-        if (!chunks.length) throw new Error('Нет текста для озвучивания.');
-        config = {
-          lang: message.lang || 'ru-RU', rate: message.rate ?? 1,
-          pitch: message.pitch ?? 1, volume: message.volume ?? 1,
-          voiceName: message.voiceName || null
-        };
-        index = nextIndex = 0;
+        if (!voices.length) {
+          cancel();
+          throw new Error('Браузер не обнаружил голоса для озвучивания. Установите совместимый движок речи или голос для Chrome.');
+        }
         status = 'playing';
-        playNext(generation);
-        return { status, index, total: chunks.length };
-      }
-      case 'SEEK': {
-        if (!chunks.length) throw new Error('Нет текущего текста.');
-        const target = Math.max(0, Math.min(chunks.length - 1, Number(message.index) || 0));
-        cancel(false);
-        index = nextIndex = target;
-        status = 'playing';
-        playNext(generation);
-        return { status, index, total: chunks.length };
+        continueQueue(generation);
+        return { started: true, status };
       }
       case 'PAUSE':
         if (status === 'playing') { synth.pause(); status = 'paused'; }
-        return { status, index, total: chunks.length };
+        return { status };
       case 'RESUME':
         if (status === 'paused') { synth.resume(); status = 'playing'; }
-        return { status, index, total: chunks.length };
+        return { status };
       case 'STOP':
         cancel();
-        return { status, index, total: 0 };
-      default: throw new Error('Неизвестная команда речевого движка.');
+        return { status };
+      default:
+        return { error: 'Неизвестная команда аудио-движка.' };
     }
-  })().then(sendResponse, error => sendResponse({ error: error?.message || String(error) }));
+  })().then(
+    reply => sendResponse(reply),
+    error => sendResponse({ error: error?.message || String(error) })
+  );
   return true;
 });
